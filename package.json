@@ -1,0 +1,31 @@
+{
+  "name": "archihau",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc -p .",
+    "start": "node dist/index.js",
+    "seed:weekdays": "ts-node-dev --transpile-only src/scripts/seed-weekdays.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.10.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.15.3",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.27"
+  }
+}
