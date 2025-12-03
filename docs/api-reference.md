@@ -309,13 +309,40 @@ PostTag {
 - **Phản hồi**: trả về Event đầy đủ và các trường `created_at`, `updated_at`.
 - **Trạng thái**: thuộc tính `status` được tính tự động dựa trên thời gian hiện tại so với `start_time`/`end_time` (`upcoming`, `ongoing`, `finished`).
 
-## 9. Healthcheck
+## 9. YouTube API
+
+| Method | Endpoint               | Auth | Quyền | Mô tả |
+|--------|------------------------|------|-------|-------|
+| GET    | `/youtube/posts`       | Không| -     | Lấy danh sách video mới nhất của một kênh YouTube. Có thể truyền `channelId` hoặc sử dụng kênh mặc định cấu hình qua `YOUTUBE_DEFAULT_CHANNEL_ID`. Optional `limit` (tối đa 20). |
+
+- **Query**:
+  - `channelId` (tuỳ chọn nếu đã cấu hình `YOUTUBE_DEFAULT_CHANNEL_ID`): ID kênh YouTube (ví dụ `UC_x5XG1OV2P6uZZ5FSM9Ttw`).
+  - `limit` (tuỳ chọn): số video muốn lấy (1-20, mặc định 5).
+- **Env**: server cần `YOUTUBE_API_KEY` hợp lệ để gọi YouTube Data API. Có thể đặt `YOUTUBE_DEFAULT_CHANNEL_ID` để mặc định lấy video từ một kênh cụ thể.
+- **Phản hồi** ví dụ:
+```json
+[
+  {
+    "id": "abc123",
+    "title": "Video title",
+    "description": "Mô tả",
+    "publishedAt": "2024-12-01T07:00:00Z",
+    "thumbnails": {
+      "default": { "url": "https://..." }
+    },
+    "duration": "PT10M20S",
+    "url": "https://www.youtube.com/watch?v=abc123"
+  }
+]
+```
+
+## 10. Healthcheck
 
 - **GET** `/health`
   - Không cần auth.
   - Phản hồi: `{ "status": "ok" }`.
 
-## 10. Ghi chú bổ sung
+## 11. Ghi chú bổ sung
 
 - Các endpoint CRUD đều trả về lỗi `400/401/403/404/500` kèm `{ "message": string }` và có thể thêm trường `details` trong một số trường hợp (ví dụ trong controller `post`).
 - Để middleware phân quyền hoạt động đúng cần seeded bảng `roles` với các tên trùng (manager/editor). Người dùng mới đăng ký sẽ nhận role mặc định `editor` (có thể thay đổi bằng env `DEFAULT_USER_ROLE`).

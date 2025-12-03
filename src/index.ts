@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import dotenv from "dotenv";
+dotenv.config();
 import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import { corsOptions } from "./config/cors";
@@ -9,6 +11,7 @@ import categoryRoutes from "./routes/category.routes";
 import tagRoutes from "./routes/tag.routes";
 import authRoutes from "./routes/auth.routes";
 import eventRoutes from "./routes/event.routes";
+import youtubeRoutes from "./routes/youtube.routes";
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -31,6 +34,7 @@ const startServer = async () => {
     app.use("/categories", categoryRoutes);
     app.use("/tags", tagRoutes);
     app.use("/events", eventRoutes);
+    app.use("/youtube", youtubeRoutes);
 
     app.use(
       (
