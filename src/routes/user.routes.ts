@@ -5,6 +5,8 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  assignRoleToUser,
+  removeRoleFromUser,
 } from "../controllers/user.controller";
 import {
   authenticate,
@@ -21,5 +23,7 @@ router.get("/:id", getUserById);
 router.post("/", createUser);
 router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);
+router.post("/:id/roles", assignRoleToUser);
+router.delete("/:id/roles/:roleName", removeRoleFromUser);
 
 export default router;

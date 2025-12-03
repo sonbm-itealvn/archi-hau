@@ -5,6 +5,8 @@ import {
   createPost,
   updatePost,
   deletePost,
+  getLatestPosts,
+  getLatestPostsByCategorySlug,
 } from "../controllers/post.controller";
 import {
   authenticate,
@@ -14,6 +16,8 @@ import {
 const router = Router();
 
 router.get("/", getPosts);
+router.get("/latest", getLatestPosts);
+router.get("/category/:slug/latest", getLatestPostsByCategorySlug);
 router.get("/:id", getPostById);
 router.post(
   "/",

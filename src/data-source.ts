@@ -8,6 +8,7 @@ import { Post } from "./entities/Post";
 import { PostCategory } from "./entities/PostCategory";
 import { Tag } from "./entities/Tag";
 import { PostTag } from "./entities/PostTag";
+import { Event } from "./entities/Event";
 
 export const AppDataSource = new DataSource({
   type: "mysql",
@@ -18,7 +19,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME ?? "archi_hau",
   synchronize: true, // auto sync schema while developing; disable in production
   logging: false,
-  entities: [User, Role, UserRole, Category, Post, PostCategory, Tag, PostTag],
+  entities: [User, Role, UserRole, Category, Post, PostCategory, Tag, PostTag, Event],
   migrations: [],
   subscribers: [],
 });

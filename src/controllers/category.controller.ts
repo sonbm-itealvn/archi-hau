@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../data-source";
 import { Category } from "../entities/Category";
+import { PostCategory } from "../entities/PostCategory";
 
 const categoryRepository = () => AppDataSource.getRepository(Category);
+const postCategoryRepository = () => AppDataSource.getRepository(PostCategory);
 const categoryRelations = ["parent", "children", "postCategories"];
 
 const parseId = (value: string): number | null => {
@@ -25,7 +27,25 @@ export const getCategories = async (_: Request, res: Response) => {
       relations: categoryRelations,
       order: { display_order: "ASC", created_at: "DESC" },
     });
-    return res.json(categories);
+
+    const countsRaw = await postCategoryRepository()
+      .createQueryBuilder("pc")
+      .select("pc.category_id", "category_id")
+      .addSelect("COUNT(pc.post_id)", "post_count")
+      .groupBy("pc.category_id")
+      .getRawMany<{ category_id: number; post_count: string }>();
+
+    const countMap = new Map<number, number>();
+    countsRaw.forEach((row) => {
+      countMap.set(row.category_id, Number(row.post_count));
+    });
+
+    const categoriesWithCounts = categories.map((category) => ({
+      ...category,
+      postCount: countMap.get(category.id) ?? 0,
+    }));
+
+    return res.json(categoriesWithCounts);
   } catch (error) {
     return handleError(res, error, "Failed to fetch categories");
   }
@@ -47,7 +67,11 @@ export const getCategoryById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    return res.json(category);
+    const count = await postCategoryRepository().count({
+      where: { category_id: id },
+    });
+
+    return res.json({ ...category, postCount: count });
   } catch (error) {
     return handleError(res, error, "Failed to fetch category");
   }
