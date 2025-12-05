@@ -12,7 +12,7 @@ import { Event } from "./entities/Event";
 
 export const AppDataSource = new DataSource({
   type: "mysql",
-  host: process.env.DB_HOST ?? "localhost",
+  host: process.env.DB_HOST ?? "103.130.216.169",
   port: Number(process.env.DB_PORT ?? 3306),
   username: process.env.DB_USER ?? "archihau1_archi_hau",
   password: process.env.DB_PASS ?? "Z0C41wIx8imOKhTGcJl9Ulsk",
