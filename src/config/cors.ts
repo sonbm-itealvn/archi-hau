@@ -11,7 +11,7 @@ const parseOrigins = (value?: string): string[] => {
     .filter(Boolean);
 };
 
-const defaultOrigins = ["http://localhost:5173"];
+const defaultOrigins = ["http://localhost:5173","https://undefined-cosmetic-pam-logged.trycloudflare.com","https://fitness-postposted-renew-punk.trycloudflare.com"];
 const envOrigins = parseOrigins(process.env.CORS_ORIGINS);
 
 export const corsOptions: CorsOptions = {
