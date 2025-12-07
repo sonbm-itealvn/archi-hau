@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  DeleteDateColumn,
+} from "typeorm";
 import { PostTag } from "./PostTag";
 
 @Entity({ name: "tags" })
@@ -14,4 +20,7 @@ export class Tag {
 
   @OneToMany(() => PostTag, (pt: PostTag) => pt.tag)
   postTags!: PostTag[];
+
+  @DeleteDateColumn({ nullable: true })
+  deleted_at?: Date | null;
 }

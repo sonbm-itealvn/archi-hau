@@ -230,7 +230,7 @@ export const deleteUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    await repo.remove(existing);
+    await repo.softRemove(existing);
     return res.status(204).send();
   } catch (error) {
     return handleError(res, error, "Failed to delete user");

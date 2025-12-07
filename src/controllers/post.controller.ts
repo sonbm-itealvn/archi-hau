@@ -158,6 +158,47 @@ export const getLatestPostsByCategorySlug = async (req: Request, res: Response) 
   }
 };
 
+export const getPostsByTagSlug = async (req: Request, res: Response) => {
+  const slug = req.params.slug;
+  if (!slug) {
+    return res.status(400).json({ message: "Tag slug is required" });
+  }
+
+  const limit = Number(req.query.limit ?? 20);
+  const safeLimit =
+    Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 20;
+
+  try {
+    const tag = await tagRepository().findOne({
+      where: { slug },
+    });
+
+    if (!tag) {
+      return res.status(404).json({ message: "Tag not found" });
+    }
+
+    const posts = await postRepository()
+      .createQueryBuilder("post")
+      .innerJoin("post.postTags", "filterPt")
+      .innerJoin("filterPt.tag", "filterTag", "filterTag.id = :tagId", {
+        tagId: tag.id,
+      })
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .andWhere("post.deleted_at IS NULL")
+      .orderBy("post.created_at", "DESC")
+      .take(safeLimit)
+      .getMany();
+
+    return res.json(posts);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch posts by tag");
+  }
+};
+
 export const getPostById = async (req: Request, res: Response) => {
   const id = parseId(req.params.id);
   if (!id) {
@@ -322,7 +363,7 @@ export const deletePost = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    await repo.remove(existing);
+    await repo.softRemove(existing);
     return res.status(204).send();
   } catch (error) {
     return handleError(res, error, "Failed to delete post");

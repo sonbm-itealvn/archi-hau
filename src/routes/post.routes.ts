@@ -7,6 +7,7 @@ import {
   deletePost,
   getLatestPosts,
   getLatestPostsByCategorySlug,
+  getPostsByTagSlug,
 } from "../controllers/post.controller";
 import {
   authenticate,
@@ -18,6 +19,7 @@ const router = Router();
 router.get("/", getPosts);
 router.get("/latest", getLatestPosts);
 router.get("/category/:slug/latest", getLatestPostsByCategorySlug);
+router.get("/tag/:slug", getPostsByTagSlug);
 router.get("/:id", getPostById);
 router.post(
   "/",

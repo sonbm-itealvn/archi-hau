@@ -6,6 +6,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  DeleteDateColumn,
 } from "typeorm";
 import { UserRole } from "./UserRole";
 import { Post } from "./Post";
@@ -48,4 +49,7 @@ export class User {
 
   @OneToMany(() => Post, (post: Post) => post.author)
   posts!: Post[];
+
+  @DeleteDateColumn({ nullable: true })
+  deleted_at?: Date | null;
 }

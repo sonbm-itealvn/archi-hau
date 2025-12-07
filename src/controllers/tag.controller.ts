@@ -119,7 +119,7 @@ export const deleteTag = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Tag not found" });
     }
 
-    await repo.remove(tag);
+    await repo.softRemove(tag);
     return res.status(204).send();
   } catch (error) {
     return handleError(res, error, "Failed to delete tag");

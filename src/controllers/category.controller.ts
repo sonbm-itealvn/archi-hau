@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../data-source";
 import { Category } from "../entities/Category";
 import { PostCategory } from "../entities/PostCategory";
+import { Post } from "../entities/Post";
 
 const categoryRepository = () => AppDataSource.getRepository(Category);
 const postCategoryRepository = () => AppDataSource.getRepository(PostCategory);
@@ -30,6 +31,8 @@ export const getCategories = async (_: Request, res: Response) => {
 
     const countsRaw = await postCategoryRepository()
       .createQueryBuilder("pc")
+      .innerJoin(Post, "post", "post.id = pc.post_id")
+      .where("post.deleted_at IS NULL")
       .select("pc.category_id", "category_id")
       .addSelect("COUNT(pc.post_id)", "post_count")
       .groupBy("pc.category_id")
@@ -67,9 +70,12 @@ export const getCategoryById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    const count = await postCategoryRepository().count({
-      where: { category_id: id },
-    });
+    const count = await postCategoryRepository()
+      .createQueryBuilder("pc")
+      .innerJoin(Post, "post", "post.id = pc.post_id")
+      .where("pc.category_id = :categoryId", { categoryId: id })
+      .andWhere("post.deleted_at IS NULL")
+      .getCount();
 
     return res.json({ ...category, postCount: count });
   } catch (error) {
@@ -224,7 +230,7 @@ export const deleteCategory = async (req: Request, res: Response) => {
       });
     }
 
-    await repo.remove(category);
+    await repo.softRemove(category);
     return res.status(204).send();
   } catch (error) {
     return handleError(res, error, "Failed to delete category");

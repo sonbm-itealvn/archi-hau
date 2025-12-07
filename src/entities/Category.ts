@@ -6,6 +6,7 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   JoinColumn,
   RelationId,
 } from "typeorm";
@@ -48,4 +49,7 @@ export class Category {
 
   @OneToMany(() => PostCategory, (pc: PostCategory) => pc.category)
   postCategories!: PostCategory[];
+
+  @DeleteDateColumn({ nullable: true })
+  deleted_at?: Date | null;
 }
