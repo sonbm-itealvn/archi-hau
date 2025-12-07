@@ -3,23 +3,23 @@ import fetch from "node-fetch";
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
-const DEFAULT_LIMIT = 5;
-const MAX_LIMIT = 20;
+const RANDOM_SAMPLE_SIZE = 3;
+const RANDOM_POOL_LIMIT = 20;
 
 const DEFAULT_CHANNEL_ID = process.env.YOUTUBE_DEFAULT_CHANNEL_ID;
 
-const parseLimit = (value?: unknown): number => {
-  if (!value) {
-    return DEFAULT_LIMIT;
+const pickRandomItems = <T>(items: T[], size: number): T[] => {
+  if (items.length <= size) {
+    return items;
   }
-  if (Array.isArray(value)) {
-    return parseLimit(value[0]);
+
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  const num = Number(value);
-  if (!Number.isInteger(num) || num <= 0) {
-    return DEFAULT_LIMIT;
-  }
-  return Math.min(num, MAX_LIMIT);
+
+  return shuffled.slice(0, size);
 };
 
 const buildVideoDetailsUrl = (videoIds: string[]): string => {
@@ -49,8 +49,6 @@ export const getYoutubeChannelPosts = async (req: Request, res: Response) => {
     });
   }
 
-  const limit = parseLimit(req.query.limit);
-
   try {
     const searchUrl = new URL(`${YOUTUBE_API_BASE}/search`);
     searchUrl.searchParams.set("key", YOUTUBE_API_KEY);
@@ -58,7 +56,7 @@ export const getYoutubeChannelPosts = async (req: Request, res: Response) => {
     searchUrl.searchParams.set("part", "snippet");
     searchUrl.searchParams.set("order", "date");
     searchUrl.searchParams.set("type", "video");
-    searchUrl.searchParams.set("maxResults", limit.toString());
+    searchUrl.searchParams.set("maxResults", RANDOM_POOL_LIMIT.toString());
 
     const searchResponse = await fetch(searchUrl.toString());
     if (!searchResponse.ok) {
@@ -118,7 +116,7 @@ export const getYoutubeChannelPosts = async (req: Request, res: Response) => {
       url: `https://www.youtube.com/watch?v=${item.id}`,
     }));
 
-    return res.json(videos);
+    return res.json(pickRandomItems(videos, RANDOM_SAMPLE_SIZE));
   } catch (error) {
     return res.status(500).json({
       message: "Unable to fetch channel videos",
