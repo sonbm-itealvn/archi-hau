@@ -158,9 +158,12 @@ const replaceContentMediaWithCloudinary = async (content: string, userId?: numbe
   return updated;
 };
 
-const uploadThumbnailIfNeeded = async (thumbnailUrl?: string | null, userId?: number) => {
+const uploadThumbnailIfNeeded = async (
+  thumbnailUrl?: string | null,
+  userId?: number
+): Promise<string | undefined> => {
   if (!thumbnailUrl || !thumbnailUrl.startsWith("http")) {
-    return thumbnailUrl ?? null;
+    return thumbnailUrl ?? undefined;
   }
   if (!isCloudinaryConfigured() || isCloudinaryUrl(thumbnailUrl)) {
     return thumbnailUrl;
