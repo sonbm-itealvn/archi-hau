@@ -9,6 +9,7 @@ import { PostCategory } from "./entities/PostCategory";
 import { Tag } from "./entities/Tag";
 import { PostTag } from "./entities/PostTag";
 import { Event } from "./entities/Event";
+import { Upload } from "./entities/Upload";
 
 export const AppDataSource = new DataSource({
   type: "mysql",
@@ -17,9 +18,10 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER ?? "archihau1_archi_hau",
   password: process.env.DB_PASS ?? "Z0C41wIx8imOKhTGcJl9Ulsk",
   database: process.env.DB_NAME ?? "archihau1_archi_hau",
+  charset: "utf8mb4_unicode_ci",
   synchronize: true, // auto sync schema while developing; disable in production
   logging: false,
-  entities: [User, Role, UserRole, Category, Post, PostCategory, Tag, PostTag, Event],
+  entities: [User, Role, UserRole, Category, Post, PostCategory, Tag, PostTag, Event, Upload],
   migrations: [],
   subscribers: [],
 });
