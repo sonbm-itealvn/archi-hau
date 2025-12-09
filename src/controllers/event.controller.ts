@@ -42,12 +42,28 @@ const serializeEvent = (event: Event) => ({
 
 export const getEvents = async (_: Request, res: Response) => {
   try {
+    const now = new Date();
+    const events = await eventRepository()
+      .createQueryBuilder("event")
+      .where("event.start_time <= :now", { now })
+      .andWhere("event.end_time >= :now", { now })
+      .orderBy("event.start_time", "DESC")
+      .getMany();
+
+    return res.json(events.map(serializeEvent));
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch events");
+  }
+};
+
+export const getAllEvents = async (_: Request, res: Response) => {
+  try {
     const events = await eventRepository().find({
       order: { start_time: "DESC" },
     });
     return res.json(events.map(serializeEvent));
   } catch (error) {
-    return handleError(res, error, "Failed to fetch events");
+    return handleError(res, error, "Failed to fetch all events");
   }
 };
 

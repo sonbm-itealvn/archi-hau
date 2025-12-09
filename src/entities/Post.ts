@@ -23,7 +23,7 @@ export class Post {
   @Column({ length: 255 })
   title!: string;
 
-  @Column({ length: 255, unique: true })
+  @Column({ length: 255 })
   slug!: string;
 
   @Column({ type: "text", nullable: true })

@@ -289,7 +289,8 @@ PostTag {
 
 | Method | Endpoint     | Auth | Quyền     | Mô tả |
 |--------|--------------|------|-----------|-------|
-| GET    | `/events`    | Không| -         | Danh sách sự kiện (sắp xếp theo `start_time` DESC). |
+| GET    | `/events`    | Không| -         | Danh sách sự kiện **đang diễn ra** (giữa `start_time` và `end_time`, sắp xếp `start_time` DESC). |
+| GET    | `/events/all`| Không| -         | Danh sách **tất cả** sự kiện (chưa bị xoá mềm), sắp xếp `start_time` DESC. |
 | GET    | `/events/:id`| Không| -         | Chi tiết sự kiện. |
 | POST   | `/events`    | Có   | `manager` | Tạo sự kiện mới (`name`, `start_time`, `end_time`, `title`, `content`). |
 | PUT    | `/events/:id`| Có   | `manager` | Cập nhật sự kiện. |

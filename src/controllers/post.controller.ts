@@ -322,6 +322,7 @@ export const updatePost = async (req: Request, res: Response) => {
     const tagIds = body.tag_ids ? normalizeIdArray(body.tag_ids) : null;
 
     const { author_id: _authorId, category_ids, tag_ids, ...updates } = body;
+
     const merged = repo.merge(existing, updates);
     const savedPost = await repo.save(merged);
 

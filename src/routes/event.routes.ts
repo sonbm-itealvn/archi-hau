@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getEvents,
+  getAllEvents,
   getEventById,
   createEvent,
   updateEvent,
@@ -14,6 +15,7 @@ import {
 const router = Router();
 
 router.get("/", getEvents);
+router.get("/all", getAllEvents);
 router.get("/:id", getEventById);
 router.post("/", authenticate, authorizeRoles("manager"), createEvent);
 router.put("/:id", authenticate, authorizeRoles("manager"), updateEvent);
