@@ -6,6 +6,11 @@ import { Category } from "../entities/Category";
 import { Tag } from "../entities/Tag";
 import { PostCategory } from "../entities/PostCategory";
 import { PostTag } from "../entities/PostTag";
+import { Upload } from "../entities/Upload";
+import {
+  isCloudinaryConfigured,
+  uploadFileFromUrlToCloudinary,
+} from "../utils/cloudinary";
 
 const postRepository = () => AppDataSource.getRepository(Post);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -14,6 +19,7 @@ const tagRepository = () => AppDataSource.getRepository(Tag);
 const postCategoryRepository = () => AppDataSource.getRepository(PostCategory);
 const postTagRepository = () => AppDataSource.getRepository(PostTag);
 const postRelations = ["author", "postCategories", "postCategories.category", "postTags", "postTags.tag"];
+const uploadRepository = () => AppDataSource.getRepository(Upload);
 
 const parseId = (value: string): number | null => {
   const id = Number(value);
@@ -89,6 +95,78 @@ const handleError = (res: Response, error: unknown, message: string) => {
   const details = error instanceof Error ? error.message : error;
   console.error(message, details);
   return res.status(500).json({ message, details });
+};
+
+const mediaSrcRegex = /<(img|video)[^>]+src=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
+
+const isCloudinaryUrl = (url: string) =>
+  url.includes("res.cloudinary.com") || url.includes("cloudinary.com");
+
+const uploadUrlAndRecord = async (url: string, userId?: number) => {
+  const folder = process.env.CLOUDINARY_FOLDER || undefined;
+  const result = await uploadFileFromUrlToCloudinary(url, {
+    folder,
+    resourceType: "auto",
+  });
+
+  const record = uploadRepository().create({
+    public_id: result.public_id,
+    url: result.secure_url ?? result.url,
+    resource_type: result.resource_type,
+    bytes: result.bytes ?? null,
+    width: result.width ?? null,
+    height: result.height ?? null,
+    format: result.format ?? null,
+    folder: result.folder ?? null,
+    original_filename: result.original_filename ?? null,
+    uploaded_by: userId ? ({ id: userId } as User) : null,
+  });
+  await uploadRepository().save(record);
+  return record;
+};
+
+const replaceContentMediaWithCloudinary = async (content: string, userId?: number) => {
+  if (!content || !isCloudinaryConfigured()) {
+    return content ?? "";
+  }
+
+  const urls = new Set<string>();
+  let match: RegExpExecArray | null;
+  mediaSrcRegex.lastIndex = 0;
+  while ((match = mediaSrcRegex.exec(content)) !== null) {
+    const src = match[2];
+    if (!isCloudinaryUrl(src)) {
+      urls.add(src);
+    }
+  }
+
+  if (urls.size === 0) {
+    return content;
+  }
+
+  const replacements = new Map<string, string>();
+  for (const url of urls) {
+    const upload = await uploadUrlAndRecord(url, userId);
+    replacements.set(url, upload.url);
+  }
+
+  let updated = content;
+  for (const [from, to] of replacements.entries()) {
+    updated = updated.split(from).join(to);
+  }
+
+  return updated;
+};
+
+const uploadThumbnailIfNeeded = async (thumbnailUrl?: string | null, userId?: number) => {
+  if (!thumbnailUrl || !thumbnailUrl.startsWith("http")) {
+    return thumbnailUrl ?? null;
+  }
+  if (!isCloudinaryConfigured() || isCloudinaryUrl(thumbnailUrl)) {
+    return thumbnailUrl;
+  }
+  const upload = await uploadUrlAndRecord(thumbnailUrl, userId);
+  return upload.url;
 };
 
 export const getPosts = async (_: Request, res: Response) => {
@@ -244,6 +322,32 @@ export const createPost = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Author not found" });
     }
 
+    if (body.thumbnail_url) {
+      try {
+        body.thumbnail_url = await uploadThumbnailIfNeeded(
+          body.thumbnail_url,
+          req.user?.id
+        );
+      } catch (err) {
+        return res
+          .status(502)
+          .json({ message: "Failed to upload thumbnail", details: `${err}` });
+      }
+    }
+
+    if (body.content) {
+      try {
+        body.content = await replaceContentMediaWithCloudinary(
+          body.content,
+          req.user?.id
+        );
+      } catch (err) {
+        return res
+          .status(502)
+          .json({ message: "Failed to upload media to Cloudinary", details: `${err}` });
+      }
+    }
+
     const { author_id: _authorId, category_ids, tag_ids, ...postPayload } = body;
     const post = postRepository().create({
       ...postPayload,
@@ -322,6 +426,32 @@ export const updatePost = async (req: Request, res: Response) => {
     const tagIds = body.tag_ids ? normalizeIdArray(body.tag_ids) : null;
 
     const { author_id: _authorId, category_ids, tag_ids, ...updates } = body;
+
+    if (updates.thumbnail_url) {
+      try {
+        updates.thumbnail_url = await uploadThumbnailIfNeeded(
+          updates.thumbnail_url,
+          req.user?.id
+        );
+      } catch (err) {
+        return res
+          .status(502)
+          .json({ message: "Failed to upload thumbnail", details: `${err}` });
+      }
+    }
+
+    if (updates.content) {
+      try {
+        updates.content = await replaceContentMediaWithCloudinary(
+          updates.content,
+          req.user?.id
+        );
+      } catch (err) {
+        return res
+          .status(502)
+          .json({ message: "Failed to upload media to Cloudinary", details: `${err}` });
+      }
+    }
 
     const merged = repo.merge(existing, updates);
     const savedPost = await repo.save(merged);

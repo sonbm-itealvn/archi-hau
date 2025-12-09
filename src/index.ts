@@ -12,6 +12,7 @@ import tagRoutes from "./routes/tag.routes";
 import authRoutes from "./routes/auth.routes";
 import eventRoutes from "./routes/event.routes";
 import youtubeRoutes from "./routes/youtube.routes";
+import uploadRoutes from "./routes/upload.routes";
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -35,6 +36,7 @@ const startServer = async () => {
     app.use("/tags", tagRoutes);
     app.use("/events", eventRoutes);
     app.use("/youtube", youtubeRoutes);
+    app.use("/uploads", uploadRoutes);
 
     app.use(
       (
