@@ -29,11 +29,18 @@ const parseId = (value: string): number | null => {
   return id;
 };
 
-const normalizeIdArray = (values?: Array<number | string> | null): number[] => {
+const normalizeIdArray = (
+  values?: Array<number | string> | string | null
+): number[] => {
   if (!values) {
     return [];
   }
-  return values
+
+  const arr: Array<number | string> = Array.isArray(values)
+    ? values
+    : `${values}`.split(",").map((v) => v.trim());
+
+  return arr
     .map((value) => Number(value))
     .filter((id) => Number.isInteger(id) && id > 0);
 };

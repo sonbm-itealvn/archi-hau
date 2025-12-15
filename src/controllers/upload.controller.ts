@@ -16,15 +16,14 @@ const upload = multer({
   limits: {
     fileSize: MAX_FILE_SIZE_BYTES,
   },
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (_req, file, cb: multer.FileFilterCallback) => {
     const isImage = file.mimetype.startsWith("image/");
     const isVideo = file.mimetype.startsWith("video/");
     if (isImage || isVideo) {
       return cb(null, true);
     }
     return cb(
-      new Error("Only image/* or video/* files are allowed"),
-      false
+      new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname)
     );
   },
 });
