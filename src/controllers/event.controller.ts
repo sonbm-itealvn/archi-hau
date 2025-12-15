@@ -1,8 +1,15 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../data-source";
 import { Event } from "../entities/Event";
+import { Upload } from "../entities/Upload";
+import {
+  isCloudinaryConfigured,
+  uploadFileFromUrlToCloudinary,
+} from "../utils/cloudinary";
+import { User } from "../entities/User";
 
 const eventRepository = () => AppDataSource.getRepository(Event);
+const uploadRepository = () => AppDataSource.getRepository(Upload);
 type EventStatus = "upcoming" | "ongoing" | "finished";
 
 const parseId = (value: string): number | null => {
@@ -17,6 +24,45 @@ const handleError = (res: Response, error: unknown, message: string) => {
   const details = error instanceof Error ? error.message : error;
   console.error(message, details);
   return res.status(500).json({ message, details });
+};
+
+const isCloudinaryUrl = (url: string) =>
+  url.includes("res.cloudinary.com") || url.includes("cloudinary.com");
+
+const uploadUrlAndRecord = async (url: string, userId?: number) => {
+  const folder = process.env.CLOUDINARY_FOLDER || undefined;
+  const result = await uploadFileFromUrlToCloudinary(url, {
+    folder,
+    resourceType: "auto",
+  });
+
+  const record = uploadRepository().create({
+    public_id: result.public_id,
+    url: result.secure_url ?? result.url,
+    resource_type: result.resource_type,
+    bytes: result.bytes ?? null,
+    width: result.width ?? null,
+    height: result.height ?? null,
+    format: result.format ?? null,
+    folder: result.folder ?? null,
+    original_filename: result.original_filename ?? null,
+    uploaded_by: userId ? ({ id: userId } as User) : null,
+  });
+  await uploadRepository().save(record);
+  return record.url;
+};
+
+const uploadBannerIfNeeded = async (
+  bannerUrl?: string | null,
+  userId?: number
+): Promise<string | undefined> => {
+  if (!bannerUrl || !bannerUrl.startsWith("http")) {
+    return bannerUrl ?? undefined;
+  }
+  if (!isCloudinaryConfigured() || isCloudinaryUrl(bannerUrl)) {
+    return bannerUrl;
+  }
+  return uploadUrlAndRecord(bannerUrl, userId);
 };
 
 const getEventStatus = (event: Event): EventStatus => {
@@ -102,6 +148,19 @@ export const createEvent = async (req: Request, res: Response) => {
   }
 
   try {
+    if (payload.banner_url) {
+      try {
+        payload.banner_url = await uploadBannerIfNeeded(
+          payload.banner_url,
+          req.user?.id
+        );
+      } catch (err) {
+        return res
+          .status(502)
+          .json({ message: "Failed to upload banner", details: `${err}` });
+      }
+    }
+
     const event = eventRepository().create(payload);
     const saved = await eventRepository().save(event);
     return res.status(201).json(serializeEvent(saved));
@@ -125,6 +184,19 @@ export const updateEvent = async (req: Request, res: Response) => {
 
     const updates = req.body as Partial<Event>;
     delete (updates as Partial<Event> & { id?: number }).id;
+
+    if (updates.banner_url) {
+      try {
+        updates.banner_url = await uploadBannerIfNeeded(
+          updates.banner_url,
+          req.user?.id
+        );
+      } catch (err) {
+        return res
+          .status(502)
+          .json({ message: "Failed to upload banner", details: `${err}` });
+      }
+    }
 
     const merged = repo.merge(existing, updates);
     const saved = await repo.save(merged);

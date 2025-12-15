@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../data-source";
 import { Tag } from "../entities/Tag";
+import { QueryFailedError } from "typeorm";
 
 const tagRepository = () => AppDataSource.getRepository(Tag);
 const tagRelations = ["postTags"];
@@ -75,6 +76,13 @@ export const createTag = async (req: Request, res: Response) => {
 
     return res.status(201).json(withRelations ?? saved);
   } catch (error) {
+    if (
+      error instanceof QueryFailedError &&
+      typeof error.driverError?.code === "string" &&
+      error.driverError.code === "ER_DUP_ENTRY"
+    ) {
+      return res.status(409).json({ message: "Tag slug already exists" });
+    }
     return handleError(res, error, "Failed to create tag");
   }
 };
@@ -102,6 +110,13 @@ export const updateTag = async (req: Request, res: Response) => {
 
     return res.json(withRelations ?? saved);
   } catch (error) {
+    if (
+      error instanceof QueryFailedError &&
+      typeof error.driverError?.code === "string" &&
+      error.driverError.code === "ER_DUP_ENTRY"
+    ) {
+      return res.status(409).json({ message: "Tag slug already exists" });
+    }
     return handleError(res, error, "Failed to update tag");
   }
 };

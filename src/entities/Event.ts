@@ -27,6 +27,9 @@ export class Event {
   @Column({ type: "longtext" })
   content!: string;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  banner_url?: string | null;
+
   @Column({ length: 255 })
   location!: string;
 
