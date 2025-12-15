@@ -3,7 +3,8 @@ import jwt from "jsonwebtoken";
 import { AppDataSource } from "../data-source";
 import { User } from "../entities/User";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret";
+const ACCESS_TOKEN_SECRET =
+  process.env.ACCESS_TOKEN_SECRET ?? process.env.JWT_SECRET ?? "dev-secret";
 
 interface TokenPayload {
   sub: number;
@@ -40,7 +41,7 @@ export const authenticate = async (
 
   const token = authHeader.split(" ")[1];
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const payload = jwt.verify(token, ACCESS_TOKEN_SECRET) as TokenPayload;
 
     const user = await AppDataSource.getRepository(User).findOne({
       where: { id: payload.sub },

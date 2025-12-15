@@ -6,8 +6,17 @@ import { Role } from "../entities/Role";
 import { UserRole } from "../entities/UserRole";
 import { hashPassword, verifyPassword } from "../utils/password";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "2h";
+const ACCESS_TOKEN_SECRET =
+  process.env.ACCESS_TOKEN_SECRET ?? process.env.JWT_SECRET ?? "dev-secret";
+const REFRESH_TOKEN_SECRET =
+  process.env.JWT_REFRESH_SECRET ??
+  process.env.REFRESH_TOKEN_SECRET ??
+  process.env.JWT_SECRET ??
+  "dev-secret";
+const ACCESS_TOKEN_EXPIRES_IN =
+  process.env.ACCESS_TOKEN_EXPIRES_IN ?? process.env.JWT_EXPIRES_IN ?? "30m";
+const REFRESH_TOKEN_EXPIRES_IN =
+  process.env.REFRESH_TOKEN_EXPIRES_IN ?? "1d";
 const DEFAULT_ROLE = process.env.DEFAULT_USER_ROLE ?? "editor";
 
 const userRepository = () => AppDataSource.getRepository(User);
@@ -38,17 +47,40 @@ const sanitizeUser = (user: User, roles: string[]) => ({
   roles,
 });
 
-const signToken = (user: User, roles: string[]) => {
-  return jwt.sign(
+const signAccessToken = (user: User, roles: string[]) =>
+  jwt.sign(
     {
       sub: user.id,
       username: user.username,
       roles,
     },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    ACCESS_TOKEN_SECRET,
+    { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
   );
-};
+
+const signRefreshToken = (user: User, roles: string[]) =>
+  jwt.sign(
+    {
+      sub: user.id,
+      username: user.username,
+      roles,
+    },
+    REFRESH_TOKEN_SECRET,
+    { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
+  );
+
+const issueTokens = (user: User, roles: string[]) => ({
+  access_token: signAccessToken(user, roles),
+  refresh_token: signRefreshToken(user, roles),
+});
+
+interface TokenPayload {
+  sub: number;
+  username: string;
+  roles?: string[];
+  iat?: number;
+  exp?: number;
+}
 
 export const register = async (req: Request, res: Response) => {
   const { username, email, password, full_name, avatar_url } = req.body as {
@@ -106,10 +138,10 @@ export const register = async (req: Request, res: Response) => {
     });
 
     const roles = extractRoles(freshUser ?? savedUser);
-    const token = signToken(savedUser, roles);
+    const tokens = issueTokens(savedUser, roles);
 
     return res.status(201).json({
-      token,
+      ...tokens,
       user: sanitizeUser(freshUser ?? savedUser, roles),
     });
   } catch (error) {
@@ -145,10 +177,10 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const roles = extractRoles(user);
-    const token = signToken(user, roles);
+    const tokens = issueTokens(user, roles);
 
     return res.json({
-      token,
+      ...tokens,
       user: sanitizeUser(user, roles),
     });
   } catch (error) {
@@ -175,5 +207,44 @@ export const getProfile = async (req: Request, res: Response) => {
     return res.json({ user: sanitizeUser(user, roles) });
   } catch (error) {
     return handleAuthError(res, error, "Failed to load profile");
+  }
+};
+
+export const refreshToken = async (req: Request, res: Response) => {
+  const { refresh_token, refreshToken: camelRefresh } = req.body as {
+    refresh_token?: string;
+    refreshToken?: string;
+  };
+  const token = refresh_token ?? camelRefresh;
+
+  if (!token) {
+    return res
+      .status(400)
+      .json({ message: "refresh_token is required in request body" });
+  }
+
+  try {
+    const payload = jwt.verify(token, REFRESH_TOKEN_SECRET) as TokenPayload;
+
+    const user = await userRepository().findOne({
+      where: { id: payload.sub },
+      relations: ["userRoles", "userRoles.role"],
+    });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const roles = extractRoles(user);
+    const tokens = issueTokens(user, roles);
+
+    return res.json({
+      ...tokens,
+      user: sanitizeUser(user, roles),
+    });
+  } catch (error) {
+    return res
+      .status(401)
+      .json({ message: "Invalid or expired refresh token" });
   }
 };

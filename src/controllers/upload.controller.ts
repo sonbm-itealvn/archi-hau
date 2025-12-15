@@ -9,11 +9,23 @@ import {
 
 const uploadRepository = () => AppDataSource.getRepository(Upload);
 
-// Store file in memory; keep size reasonable to prevent abuse
+const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024; // 200MB to allow videos
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: MAX_FILE_SIZE_BYTES,
+  },
+  fileFilter: (_req, file, cb) => {
+    const isImage = file.mimetype.startsWith("image/");
+    const isVideo = file.mimetype.startsWith("video/");
+    if (isImage || isVideo) {
+      return cb(null, true);
+    }
+    return cb(
+      new Error("Only image/* or video/* files are allowed"),
+      false
+    );
   },
 });
 
@@ -29,14 +41,22 @@ export const uploadToCloudinary = async (req: Request, res: Response) => {
     (req.body?.folder as string | undefined) ||
     process.env.CLOUDINARY_FOLDER ||
     undefined;
-  const resourceType =
-    ((req.body?.resource_type as string | undefined) ??
-      "auto") as "image" | "video" | "raw" | "auto";
+
+  const requestedResourceType = (req.body?.resource_type ??
+    req.body?.resourceType) as "image" | "video" | "raw" | "auto" | undefined;
+
+  const inferredResourceType: "image" | "video" | "raw" | "auto" =
+    requestedResourceType ??
+    (file.mimetype.startsWith("video/")
+      ? "video"
+      : file.mimetype.startsWith("image/")
+      ? "image"
+      : "auto");
 
   try {
     const result = await uploadBufferToCloudinary(file.buffer, {
       folder,
-      resourceType,
+      resourceType: inferredResourceType,
     });
 
     const record = uploadRepository().create({

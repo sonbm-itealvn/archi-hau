@@ -38,6 +38,23 @@ const normalizeIdArray = (values?: Array<number | string> | null): number[] => {
     .filter((id) => Number.isInteger(id) && id > 0);
 };
 
+const normalizeStringArray = (
+  values?: Array<string | number> | string | null
+): string[] => {
+  if (!values) {
+    return [];
+  }
+  if (Array.isArray(values)) {
+    return values
+      .map((v) => `${v}`.trim())
+      .filter((v) => v.length > 0);
+  }
+  return `${values}`
+    .split(",")
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0);
+};
+
 const syncPostCategories = async (postId: number, categoryIds: number[]) => {
   await postCategoryRepository().delete({ post_id: postId });
   if (categoryIds.length === 0) {
@@ -172,12 +189,52 @@ const uploadThumbnailIfNeeded = async (
   return upload.url;
 };
 
-export const getPosts = async (_: Request, res: Response) => {
+export const getPosts = async (req: Request, res: Response) => {
   try {
-    const posts = await postRepository().find({
-      relations: postRelations,
-      order: { created_at: "DESC" },
-    });
+    const categoryIds = normalizeIdArray(
+      (req.query.category_ids as Array<number | string> | string | undefined) ??
+        (req.query.categoryIds as Array<number | string> | string | undefined)
+    );
+    const categorySlugs = normalizeStringArray(
+      (req.query.category_slugs as Array<string> | string | undefined) ??
+        (req.query.categorySlugs as Array<string> | string | undefined)
+    );
+    const status =
+      typeof req.query.status === "string" ? req.query.status : undefined;
+
+    const qb = postRepository()
+      .createQueryBuilder("post")
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .where("post.deleted_at IS NULL")
+      .orderBy("post.created_at", "DESC");
+
+    if (categoryIds.length > 0) {
+      qb.innerJoin(
+        "post.postCategories",
+        "filterPcById",
+        "filterPcById.category_id IN (:...categoryIds)",
+        { categoryIds }
+      );
+    }
+
+    if (categorySlugs.length > 0) {
+      qb.innerJoin("post.postCategories", "filterPcBySlug").innerJoin(
+        "filterPcBySlug.category",
+        "filterCategory",
+        "filterCategory.slug IN (:...categorySlugs)",
+        { categorySlugs }
+      );
+    }
+
+    if (status) {
+      qb.andWhere("post.status = :status", { status });
+    }
+
+    const posts = await qb.getMany();
     return res.json(posts);
   } catch (error) {
     return handleError(res, error, "Failed to fetch posts");
