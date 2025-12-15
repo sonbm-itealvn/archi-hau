@@ -18,7 +18,7 @@ export class Banner {
   @Column({ length: 255 })
   image_url!: string;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   link_url?: string | null;
 
   @Column({ type: "text", nullable: true })
