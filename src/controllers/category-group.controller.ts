@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { In } from "typeorm";
+import { In, Not } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { CategoryGroup } from "../entities/CategoryGroup";
 import { Category } from "../entities/Category";
@@ -406,6 +406,221 @@ export const getPostsByGroup = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return handleError(res, error, "Failed to fetch posts by category group");
+  }
+};
+
+// Helper function để lấy posts theo category slug
+const getPostsByCategorySlug = async (
+  categorySlug: string,
+  limit: number,
+  excludePostIds: number[] = [],
+  orderBy: "DESC" | "RANDOM" = "DESC"
+) => {
+  const category = await categoryRepository().findOne({
+    where: { slug: categorySlug },
+  });
+
+  if (!category) {
+    return null;
+  }
+
+  const qb = postRepository()
+    .createQueryBuilder("post")
+    .innerJoin("post.postCategories", "postCategory")
+    .where("postCategory.category_id = :categoryId", { categoryId: category.id })
+    .andWhere("post.deleted_at IS NULL")
+    .andWhere("post.status = :status", { status: "published" })
+    .leftJoinAndSelect("post.author", "author")
+    .leftJoinAndSelect("post.postCategories", "postCategories")
+    .leftJoinAndSelect("postCategories.category", "category")
+    .leftJoinAndSelect("post.postTags", "postTags")
+    .leftJoinAndSelect("postTags.tag", "tag")
+    .distinct(true);
+
+  if (excludePostIds.length > 0) {
+    qb.andWhere("post.id NOT IN (:...excludeIds)", { excludeIds: excludePostIds });
+  }
+
+  if (orderBy === "DESC") {
+    qb.orderBy("post.created_at", "DESC");
+  } else if (orderBy === "RANDOM") {
+    qb.orderBy("RAND()");
+  }
+
+  return await qb.take(limit).getMany();
+};
+
+// Helper function để lấy posts theo group slug
+const getPostsByGroupSlug = async (
+  groupSlug: string,
+  limit: number,
+  excludePostIds: number[] = [],
+  orderBy: "DESC" | "RANDOM" = "DESC"
+) => {
+  const group = await categoryGroupRepository().findOne({
+    where: { slug: groupSlug },
+    relations: ["categories"],
+  });
+
+  if (!group || !group.categories || group.categories.length === 0) {
+    return null;
+  }
+
+  const categoryIds = group.categories.map((cat) => cat.id);
+
+  const qb = postRepository()
+    .createQueryBuilder("post")
+    .innerJoin("post.postCategories", "postCategory")
+    .where("postCategory.category_id IN (:...categoryIds)", { categoryIds })
+    .andWhere("post.deleted_at IS NULL")
+    .andWhere("post.status = :status", { status: "published" })
+    .leftJoinAndSelect("post.author", "author")
+    .leftJoinAndSelect("post.postCategories", "postCategories")
+    .leftJoinAndSelect("postCategories.category", "category")
+    .leftJoinAndSelect("post.postTags", "postTags")
+    .leftJoinAndSelect("postTags.tag", "tag")
+    .distinct(true);
+
+  if (excludePostIds.length > 0) {
+    qb.andWhere("post.id NOT IN (:...excludeIds)", { excludeIds: excludePostIds });
+  }
+
+  if (orderBy === "DESC") {
+    qb.orderBy("post.created_at", "DESC");
+  } else if (orderBy === "RANDOM") {
+    qb.orderBy("RAND()");
+  }
+
+  return await qb.take(limit).getMany();
+};
+
+// 1. Lấy 5 bài mới nhất của nhóm hoạt động khoa
+export const getLatestPostsByHoatDongKhoa = async (_: Request, res: Response) => {
+  try {
+    const posts = await getPostsByCategorySlug("hoat-dong-su-kien", 5, [], "DESC");
+    
+    if (posts === null) {
+      return res.status(404).json({ message: "Category 'hoat-dong-su-kien' not found" });
+    }
+
+    return res.json(posts);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch latest posts by hoat dong khoa");
+  }
+};
+
+// 2. Lấy 6 bài ngẫu nhiên của nhóm hoạt động khoa trừ đi 5 bài mới nhất
+export const getRandomPostsByHoatDongKhoa = async (_: Request, res: Response) => {
+  try {
+    // Lấy 5 bài mới nhất để loại trừ
+    const latestPosts = await getPostsByCategorySlug("hoat-dong-su-kien", 5, [], "DESC");
+    
+    if (latestPosts === null) {
+      return res.status(404).json({ message: "Category 'hoat-dong-su-kien' not found" });
+    }
+
+    const excludeIds = latestPosts.map((post) => post.id);
+    
+    // Lấy 6 bài ngẫu nhiên (trừ 5 bài mới nhất)
+    const randomPosts = await getPostsByCategorySlug("hoat-dong-su-kien", 6, excludeIds, "RANDOM");
+
+    return res.json(randomPosts || []);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch random posts by hoat dong khoa");
+  }
+};
+
+// 3. Lấy 5 bài mới nhất trong nhóm hợp tác
+export const getLatestPostsByHopTac = async (_: Request, res: Response) => {
+  try {
+    const posts = await getPostsByGroupSlug("hop-tac-ket-noi", 5, [], "DESC");
+    
+    if (posts === null) {
+      return res.status(404).json({ message: "Group 'hop-tac-ket-noi' not found" });
+    }
+
+    return res.json(posts);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch latest posts by hop tac");
+  }
+};
+
+// 4. Lấy 5 thông báo mới nhất trong nhóm thông báo
+export const getLatestNotifications = async (_: Request, res: Response) => {
+  try {
+    const posts = await getPostsByGroupSlug("thong-bao", 5, [], "DESC");
+    
+    if (posts === null) {
+      return res.status(404).json({ message: "Group 'thong-bao' not found" });
+    }
+
+    return res.json(posts);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch latest notifications");
+  }
+};
+
+// 5. Lấy toàn bộ thông báo trong nhóm thông báo
+export const getAllNotifications = async (req: Request, res: Response) => {
+  try {
+    const status = typeof req.query.status === "string" ? req.query.status : "published";
+    const limit = Number(req.query.limit ?? 100);
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 500) : 100;
+    const page = Number(req.query.page ?? 1);
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const offset = (safePage - 1) * safeLimit;
+
+    const group = await categoryGroupRepository().findOne({
+      where: { slug: "thong-bao" },
+      relations: ["categories"],
+    });
+
+    if (!group) {
+      return res.status(404).json({ message: "Group 'thong-bao' not found" });
+    }
+
+    if (!group.categories || group.categories.length === 0) {
+      return res.json({
+        posts: [],
+        pagination: {
+          page: safePage,
+          limit: safeLimit,
+          total: 0,
+          totalPages: 0,
+        },
+      });
+    }
+
+    const categoryIds = group.categories.map((cat) => cat.id);
+
+    const qb = postRepository()
+      .createQueryBuilder("post")
+      .innerJoin("post.postCategories", "postCategory")
+      .where("postCategory.category_id IN (:...categoryIds)", { categoryIds })
+      .andWhere("post.deleted_at IS NULL")
+      .andWhere("post.status = :status", { status })
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .orderBy("post.created_at", "DESC")
+      .distinct(true);
+
+    const total = await qb.getCount();
+    const posts = await qb.skip(offset).take(safeLimit).getMany();
+
+    return res.json({
+      posts,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch all notifications");
   }
 };
 
