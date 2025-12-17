@@ -18,8 +18,8 @@ router.get("/active", getActiveBanner);
 router.get("/", getBanners);
 router.get("/:id", getBannerById);
 router.post("/", authenticate, authorizeRoles("manager"), createBanner);
-router.put("/:id(\\d+)", authenticate, authorizeRoles("manager"), updateBanner);
-router.delete("/:id(\\d+)", authenticate, authorizeRoles("manager"), deleteBanner);
+router.put("/:id", authenticate, authorizeRoles("manager"), updateBanner);
+router.delete("/:id", authenticate, authorizeRoles("manager"), deleteBanner);
 
 export default router;
 
