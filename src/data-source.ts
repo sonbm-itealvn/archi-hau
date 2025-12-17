@@ -4,6 +4,7 @@ import { User } from "./entities/User";
 import { Role } from "./entities/Role";
 import { UserRole } from "./entities/UserRole";
 import { Category } from "./entities/Category";
+import { CategoryGroup } from "./entities/CategoryGroup";
 import { Post } from "./entities/Post";
 import { PostCategory } from "./entities/PostCategory";
 import { Tag } from "./entities/Tag";
@@ -27,6 +28,7 @@ export const AppDataSource = new DataSource({
     Role,
     UserRole,
     Category,
+    CategoryGroup,
     Post,
     PostCategory,
     Tag,
