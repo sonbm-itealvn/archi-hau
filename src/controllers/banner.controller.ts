@@ -74,6 +74,22 @@ const uploadImageIfNeeded = async (
   return uploadUrlAndRecord(imageUrl, userId);
 };
 
+const deactivateAllOtherBanners = async (excludeId?: number) => {
+  const repo = bannerRepository();
+  // TypeORM doesn't support $ne, so we need to use query builder
+  const qb = repo
+    .createQueryBuilder()
+    .update(Banner)
+    .set({ is_active: false })
+    .where("is_active = :isActive", { isActive: true });
+  
+  if (excludeId) {
+    qb.andWhere("id != :excludeId", { excludeId });
+  }
+  
+  await qb.execute();
+};
+
 export const getBanners = async (req: Request, res: Response) => {
   try {
     const active = parseBooleanQuery(req.query.active);
@@ -97,6 +113,11 @@ export const getBanners = async (req: Request, res: Response) => {
 };
 
 export const getBannerById = async (req: Request, res: Response) => {
+  // Nếu id là "active", không xử lý ở đây (sẽ được route /active xử lý)
+  if (req.params.id === "active") {
+    return res.status(400).json({ message: "Use GET /banners/active endpoint" });
+  }
+
   const id = parseId(req.params.id);
   if (!id) {
     return res.status(400).json({ message: "Invalid banner id" });
@@ -137,6 +158,11 @@ export const createBanner = async (req: Request, res: Response) => {
       }
     }
 
+    // Nếu banner mới được set is_active = true, thì deactivate tất cả banner khác
+    if (payload.is_active === true) {
+      await deactivateAllOtherBanners();
+    }
+
     const banner = bannerRepository().create(payload);
     const saved = await bannerRepository().save(banner);
     return res.status(201).json(saved);
@@ -174,6 +200,11 @@ export const updateBanner = async (req: Request, res: Response) => {
       }
     }
 
+    // Nếu banner được update với is_active = true, thì deactivate tất cả banner khác
+    if (updates.is_active === true) {
+      await deactivateAllOtherBanners(id);
+    }
+
     const merged = repo.merge(existing, updates);
     const saved = await repo.save(merged);
     return res.json(saved);
@@ -199,6 +230,23 @@ export const deleteBanner = async (req: Request, res: Response) => {
     return res.status(204).send();
   } catch (error) {
     return handleError(res, error, "Failed to delete banner");
+  }
+};
+
+export const getActiveBanner = async (req: Request, res: Response) => {
+  try {
+    const banner = await bannerRepository().findOne({
+      where: { is_active: true },
+      order: { display_order: "ASC", created_at: "DESC" },
+    });
+    
+    if (!banner) {
+      return res.status(404).json({ message: "No active banner found" });
+    }
+    
+    return res.json(banner);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch active banner");
   }
 };
 
