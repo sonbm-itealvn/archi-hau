@@ -37,7 +37,12 @@ const startServer = async () => {
     app.use("/posts", postRoutes);
     app.use("/categories", categoryRoutes);
     app.use("/category-groups", categoryGroupRoutes);
+    
+    // Register special posts routes
+    console.log("Registering special-posts routes...");
     app.use("/special-posts", specialPostsRoutes);
+    console.log("Special-posts routes registered successfully");
+    
     app.use("/tags", tagRoutes);
     app.use("/events", eventRoutes);
     app.use("/youtube", youtubeRoutes);

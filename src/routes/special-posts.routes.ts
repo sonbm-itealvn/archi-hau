@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import {
   getLatestPostsByHoatDongKhoa,
   getRandomPostsByHoatDongKhoa,
@@ -8,6 +8,11 @@ import {
 } from "../controllers/category-group.controller";
 
 const router = Router();
+
+// Test route để kiểm tra routes có hoạt động không
+router.get("/test", (_: Request, res: Response) => {
+  return res.json({ message: "Special posts routes are working!" });
+});
 
 // 1. Lấy 5 bài mới nhất của nhóm hoạt động khoa
 router.get("/hoat-dong-khoa/latest", getLatestPostsByHoatDongKhoa);
