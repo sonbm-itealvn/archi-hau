@@ -1,12 +1,14 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../data-source";
 import { Category } from "../entities/Category";
+import { CategoryGroup } from "../entities/CategoryGroup";
 import { PostCategory } from "../entities/PostCategory";
 import { Post } from "../entities/Post";
 
 const categoryRepository = () => AppDataSource.getRepository(Category);
+const categoryGroupRepository = () => AppDataSource.getRepository(CategoryGroup);
 const postCategoryRepository = () => AppDataSource.getRepository(PostCategory);
-const categoryRelations = ["parent", "children", "postCategories"];
+const categoryRelations = ["parent", "children", "categoryGroup", "postCategories"];
 
 const parseId = (value: string): number | null => {
   const id = Number(value);
@@ -86,6 +88,7 @@ export const getCategoryById = async (req: Request, res: Response) => {
 export const createCategory = async (req: Request, res: Response) => {
   const payload = req.body as Partial<Category> & {
     parent_id?: number | string | null;
+    category_group_id?: number | string | null;
   };
 
   const requiredFields: Array<keyof Category> = ["name", "slug"];
@@ -98,6 +101,7 @@ export const createCategory = async (req: Request, res: Response) => {
 
   try {
     let parent: Category | null = null;
+    let categoryGroup: CategoryGroup | null = null;
 
     if (payload.parent_id !== undefined && payload.parent_id !== null) {
       const parsedParent = Number(payload.parent_id);
@@ -118,9 +122,28 @@ export const createCategory = async (req: Request, res: Response) => {
       parent = parentCategory;
     }
 
+    if (payload.category_group_id !== undefined && payload.category_group_id !== null) {
+      const parsedGroupId = Number(payload.category_group_id);
+      if (!Number.isInteger(parsedGroupId) || parsedGroupId <= 0) {
+        return res
+          .status(400)
+          .json({ message: "category_group_id must be a positive integer" });
+      }
+
+      const group = await categoryGroupRepository().findOneBy({
+        id: parsedGroupId,
+      });
+
+      if (!group) {
+        return res.status(404).json({ message: "Category group not found" });
+      }
+
+      categoryGroup = group;
+    }
+
     const repo = categoryRepository();
-    const { parent_id: _parentId, ...rest } = payload;
-    const category = repo.create({ ...rest, parent });
+    const { parent_id: _parentId, category_group_id: _groupId, ...rest } = payload;
+    const category = repo.create({ ...rest, parent, categoryGroup });
 
     const saved = await repo.save(category);
     const withRelations = await repo.findOne({
@@ -142,17 +165,22 @@ export const updateCategory = async (req: Request, res: Response) => {
 
   const payload = req.body as Partial<Category> & {
     parent_id?: number | string | null;
+    category_group_id?: number | string | null;
   };
   const hasParentField = Object.prototype.hasOwnProperty.call(
     payload,
     "parent_id"
+  );
+  const hasGroupField = Object.prototype.hasOwnProperty.call(
+    payload,
+    "category_group_id"
   );
 
   try {
     const repo = categoryRepository();
     const existing = await repo.findOne({
       where: { id },
-      relations: ["parent"],
+      relations: ["parent", "categoryGroup"],
     });
 
     if (!existing) {
@@ -160,6 +188,7 @@ export const updateCategory = async (req: Request, res: Response) => {
     }
 
     let nextParent: Category | null | undefined;
+    let nextCategoryGroup: CategoryGroup | null | undefined;
 
     if (hasParentField) {
       if (payload.parent_id === null) {
@@ -188,11 +217,39 @@ export const updateCategory = async (req: Request, res: Response) => {
       }
     }
 
-    const { parent_id: _ignored, ...updates } = payload;
+    if (hasGroupField) {
+      if (payload.category_group_id === null) {
+        nextCategoryGroup = null;
+      } else if (payload.category_group_id === undefined) {
+        nextCategoryGroup = existing.categoryGroup ?? null;
+      } else {
+        const parsedGroupId = Number(payload.category_group_id);
+        if (!Number.isInteger(parsedGroupId) || parsedGroupId <= 0) {
+          return res
+            .status(400)
+            .json({ message: "category_group_id must be a positive integer" });
+        }
+
+        const group = await categoryGroupRepository().findOneBy({
+          id: parsedGroupId,
+        });
+        if (!group) {
+          return res.status(404).json({ message: "Category group not found" });
+        }
+
+        nextCategoryGroup = group;
+      }
+    }
+
+    const { parent_id: _ignored, category_group_id: _groupId, ...updates } = payload;
     const merged = repo.merge(existing, updates);
 
     if (hasParentField) {
       merged.parent = nextParent ?? null;
+    }
+
+    if (hasGroupField) {
+      merged.categoryGroup = nextCategoryGroup ?? null;
     }
 
     const saved = await repo.save(merged);

@@ -8,6 +8,7 @@ import { AppDataSource } from "./data-source";
 import userRoutes from "./routes/user.routes";
 import postRoutes from "./routes/post.routes";
 import categoryRoutes from "./routes/category.routes";
+import categoryGroupRoutes from "./routes/category-group.routes";
 import tagRoutes from "./routes/tag.routes";
 import authRoutes from "./routes/auth.routes";
 import eventRoutes from "./routes/event.routes";
@@ -34,6 +35,7 @@ const startServer = async () => {
     app.use("/users", userRoutes);
     app.use("/posts", postRoutes);
     app.use("/categories", categoryRoutes);
+    app.use("/category-groups", categoryGroupRoutes);
     app.use("/tags", tagRoutes);
     app.use("/events", eventRoutes);
     app.use("/youtube", youtubeRoutes);

@@ -11,6 +11,7 @@ import {
   RelationId,
 } from "typeorm";
 import { PostCategory } from "./PostCategory";
+import { CategoryGroup } from "./CategoryGroup";
 
 @Entity({ name: "categories" })
 export class Category {
@@ -46,6 +47,15 @@ export class Category {
 
   @OneToMany(() => Category, (cat: Category) => cat.parent)
   children!: Category[];
+
+  @ManyToOne(() => CategoryGroup, (group: CategoryGroup) => group.categories, {
+    nullable: true,
+  })
+  @JoinColumn({ name: "category_group_id" })
+  categoryGroup?: CategoryGroup | null;
+
+  @RelationId((category: Category) => category.categoryGroup)
+  category_group_id?: number | null;
 
   @OneToMany(() => PostCategory, (pc: PostCategory) => pc.category)
   postCategories!: PostCategory[];
