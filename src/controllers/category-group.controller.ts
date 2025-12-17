@@ -497,10 +497,11 @@ const getPostsByGroupSlug = async (
 // 1. Lấy 5 bài mới nhất của nhóm hoạt động khoa
 export const getLatestPostsByHoatDongKhoa = async (_: Request, res: Response) => {
   try {
-    const posts = await getPostsByCategorySlug("hoat-dong-su-kien", 5, [], "DESC");
+    // "hoat-dong-su-kien" là group slug
+    const posts = await getPostsByGroupSlug("hoat-dong-su-kien", 5, [], "DESC");
     
     if (posts === null) {
-      return res.status(404).json({ message: "Category 'hoat-dong-su-kien' not found" });
+      return res.status(404).json({ message: "Group 'hoat-dong-su-kien' not found" });
     }
 
     return res.json(posts);
@@ -512,17 +513,18 @@ export const getLatestPostsByHoatDongKhoa = async (_: Request, res: Response) =>
 // 2. Lấy 6 bài ngẫu nhiên của nhóm hoạt động khoa trừ đi 5 bài mới nhất
 export const getRandomPostsByHoatDongKhoa = async (_: Request, res: Response) => {
   try {
+    // "hoat-dong-su-kien" là group slug
     // Lấy 5 bài mới nhất để loại trừ
-    const latestPosts = await getPostsByCategorySlug("hoat-dong-su-kien", 5, [], "DESC");
+    const latestPosts = await getPostsByGroupSlug("hoat-dong-su-kien", 5, [], "DESC");
     
     if (latestPosts === null) {
-      return res.status(404).json({ message: "Category 'hoat-dong-su-kien' not found" });
+      return res.status(404).json({ message: "Group 'hoat-dong-su-kien' not found" });
     }
 
     const excludeIds = latestPosts.map((post) => post.id);
     
     // Lấy 6 bài ngẫu nhiên (trừ 5 bài mới nhất)
-    const randomPosts = await getPostsByCategorySlug("hoat-dong-su-kien", 6, excludeIds, "RANDOM");
+    const randomPosts = await getPostsByGroupSlug("hoat-dong-su-kien", 6, excludeIds, "RANDOM");
 
     return res.json(randomPosts || []);
   } catch (error) {
