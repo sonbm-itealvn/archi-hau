@@ -550,7 +550,7 @@ export const getLatestPostsByHopTac = async (_: Request, res: Response) => {
 // 4. Lấy 5 thông báo mới nhất trong nhóm thông báo
 export const getLatestNotifications = async (_: Request, res: Response) => {
   try {
-    const posts = await getPostsByGroupSlug("thong-bao", 5, [], "DESC");
+    const posts = await getPostsByGroupSlug("thong-bao", 10, [], "DESC");
     
     if (posts === null) {
       return res.status(404).json({ message: "Group 'thong-bao' not found" });
