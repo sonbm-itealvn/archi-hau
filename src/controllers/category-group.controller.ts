@@ -510,27 +510,38 @@ export const getLatestPostsByHoatDongKhoa = async (_: Request, res: Response) =>
   }
 };
 
-// 2. Lấy 6 bài ngẫu nhiên của nhóm hoạt động khoa trừ đi 5 bài mới nhất
+// 2. Lấy 6 mới của nhóm hoạt động khoa trừ đi 5 bài mới nhất
 export const getRandomPostsByHoatDongKhoa = async (_: Request, res: Response) => {
   try {
-    // "hoat-dong-su-kien" là group slug
-    // Lấy 5 bài mới nhất để loại trừ
-    const latestPosts = await getPostsByGroupSlug("hoat-dong-su-kien", 5, [], "DESC");
-    
+    // Lấy 5 bài mới nhất đầu tiên
+    const latestPosts = await getPostsByGroupSlug(
+      "hoat-dong-su-kien",
+      5,
+      [],
+      "DESC"
+    );
+
     if (latestPosts === null) {
       return res.status(404).json({ message: "Group 'hoat-dong-su-kien' not found" });
     }
 
+    // ID của 5 bài mới nhất
     const excludeIds = latestPosts.map((post) => post.id);
-    
-    // Lấy 6 bài ngẫu nhiên (trừ 5 bài mới nhất)
-    const randomPosts = await getPostsByGroupSlug("hoat-dong-su-kien", 6, excludeIds, "RANDOM");
 
-    return res.json(randomPosts || []);
+    // Lấy 6 bài mới nhất tiếp theo (sau khi loại 5 bài đầu)
+    const nextLatestPosts = await getPostsByGroupSlug(
+      "hoat-dong-su-kien",
+      6,
+      excludeIds,
+      "DESC"
+    );
+
+    return res.json(nextLatestPosts || []);
   } catch (error) {
-    return handleError(res, error, "Failed to fetch random posts by hoat dong khoa");
+    return handleError(res, error, "Failed to fetch next latest posts by hoat dong khoa");
   }
 };
+
 
 // 3. Lấy 5 bài mới nhất trong nhóm hợp tác
 export const getLatestPostsByHopTac = async (_: Request, res: Response) => {
