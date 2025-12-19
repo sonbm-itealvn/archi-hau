@@ -542,6 +542,22 @@ export const getRandomPostsByHoatDongKhoa = async (_: Request, res: Response) =>
   }
 };
 
+// Lấy 5 bài ngẫu nhiên trong nhóm hoạt động sự kiện (không loại trừ)
+export const getRandomPostsByHoatDongSuKien = async (_: Request, res: Response) => {
+  try {
+    // "hoat-dong-su-kien" là group slug
+    const posts = await getPostsByGroupSlug("hoat-dong-su-kien", 5, [], "RANDOM");
+    
+    if (posts === null) {
+      return res.status(404).json({ message: "Group 'hoat-dong-su-kien' not found" });
+    }
+
+    return res.json(posts || []);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch random posts by hoat dong su kien");
+  }
+};
+
 
 // 3. Lấy 5 bài mới nhất trong nhóm hợp tác
 export const getLatestPostsByHopTac = async (_: Request, res: Response) => {
