@@ -567,3 +567,173 @@ export const deletePost = async (req: Request, res: Response) => {
     return handleError(res, error, "Failed to delete post");
   }
 };
+
+export const getPostsByThietKeKienTruc = async (req: Request, res: Response) => {
+  try {
+    const status =
+      typeof req.query.status === "string" ? req.query.status : "published";
+    const limit = Number(req.query.limit ?? 20);
+    const safeLimit =
+      Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 20;
+    const page = Number(req.query.page ?? 1);
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const offset = (safePage - 1) * safeLimit;
+
+    const category = await categoryRepository().findOne({
+      where: { slug: "thiet-ke-kien-truc" },
+    });
+
+    if (!category) {
+      return res.status(404).json({ message: "Category 'thiet-ke-kien-truc' not found" });
+    }
+
+    const qb = postRepository()
+      .createQueryBuilder("post")
+      .innerJoin("post.postCategories", "postCategory")
+      .where("postCategory.category_id = :categoryId", { categoryId: category.id })
+      .andWhere("post.deleted_at IS NULL")
+      .andWhere("post.status = :status", { status })
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .orderBy("post.created_at", "DESC")
+      .distinct(true);
+
+    const total = await qb.getCount();
+    const posts = await qb.skip(offset).take(safeLimit).getMany();
+
+    return res.json({
+      posts,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch posts by thiet-ke-kien-truc");
+  }
+};
+
+export const getPostsByLyThuyetChuyenNganh = async (req: Request, res: Response) => {
+  try {
+    const status =
+      typeof req.query.status === "string" ? req.query.status : "published";
+    const limit = Number(req.query.limit ?? 20);
+    const safeLimit =
+      Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 20;
+    const page = Number(req.query.page ?? 1);
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const offset = (safePage - 1) * safeLimit;
+
+    const category = await categoryRepository().findOne({
+      where: { slug: "ly-thuyet-chuyen-nganh" },
+    });
+
+    if (!category) {
+      return res.status(404).json({ message: "Category 'ly-thuyet-chuyen-nganh' not found" });
+    }
+
+    const qb = postRepository()
+      .createQueryBuilder("post")
+      .innerJoin("post.postCategories", "postCategory")
+      .where("postCategory.category_id = :categoryId", { categoryId: category.id })
+      .andWhere("post.deleted_at IS NULL")
+      .andWhere("post.status = :status", { status })
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .orderBy("post.created_at", "DESC")
+      .distinct(true);
+
+    const total = await qb.getCount();
+    const posts = await qb.skip(offset).take(safeLimit).getMany();
+
+    return res.json({
+      posts,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch posts by ly-thuyet-chuyen-nganh");
+  }
+};
+
+export const getAllPostsByThucDia = async (req: Request, res: Response) => {
+  try {
+    const status =
+      typeof req.query.status === "string" ? req.query.status : "published";
+
+    const category = await categoryRepository().findOne({
+      where: { slug: "thuc-dia" },
+    });
+
+    if (!category) {
+      return res.status(404).json({ message: "Category 'thuc-dia' not found" });
+    }
+
+    const qb = postRepository()
+      .createQueryBuilder("post")
+      .innerJoin("post.postCategories", "postCategory")
+      .where("postCategory.category_id = :categoryId", { categoryId: category.id })
+      .andWhere("post.deleted_at IS NULL")
+      .andWhere("post.status = :status", { status })
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .orderBy("post.created_at", "DESC")
+      .distinct(true);
+
+    const posts = await qb.getMany();
+
+    return res.json(posts);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch all posts by thuc-dia");
+  }
+};
+
+export const getAllPostsByThucTap = async (req: Request, res: Response) => {
+  try {
+    const status =
+      typeof req.query.status === "string" ? req.query.status : "published";
+
+    const category = await categoryRepository().findOne({
+      where: { slug: "thuc-tap" },
+    });
+
+    if (!category) {
+      return res.status(404).json({ message: "Category 'thuc-tap' not found" });
+    }
+
+    const qb = postRepository()
+      .createQueryBuilder("post")
+      .innerJoin("post.postCategories", "postCategory")
+      .where("postCategory.category_id = :categoryId", { categoryId: category.id })
+      .andWhere("post.deleted_at IS NULL")
+      .andWhere("post.status = :status", { status })
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .orderBy("post.created_at", "DESC")
+      .distinct(true);
+
+    const posts = await qb.getMany();
+
+    return res.json(posts);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch all posts by thuc-tap");
+  }
+};

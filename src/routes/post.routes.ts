@@ -8,6 +8,10 @@ import {
   getLatestPosts,
   getLatestPostsByCategorySlug,
   getPostsByTagSlug,
+  getPostsByThietKeKienTruc,
+  getPostsByLyThuyetChuyenNganh,
+  getAllPostsByThucDia,
+  getAllPostsByThucTap,
 } from "../controllers/post.controller";
 import {
   authenticate,
@@ -20,6 +24,10 @@ router.get("/", getPosts);
 router.get("/latest", getLatestPosts);
 router.get("/category/:slug/latest", getLatestPostsByCategorySlug);
 router.get("/tag/:slug", getPostsByTagSlug);
+router.get("/category/thiet-ke-kien-truc", getPostsByThietKeKienTruc);
+router.get("/category/ly-thuyet-chuyen-nganh", getPostsByLyThuyetChuyenNganh);
+router.get("/category/thuc-dia/all", getAllPostsByThucDia);
+router.get("/category/thuc-tap/all", getAllPostsByThucTap);
 router.get("/:id", getPostById);
 router.post(
   "/",
