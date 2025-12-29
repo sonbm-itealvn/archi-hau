@@ -12,6 +12,7 @@ import {
   getPostsByLyThuyetChuyenNganh,
   getAllPostsByThucDia,
   getAllPostsByThucTap,
+  getPostsBySanPham,
 } from "../controllers/post.controller";
 import {
   authenticate,
@@ -28,6 +29,7 @@ router.get("/category/thiet-ke-kien-truc", getPostsByThietKeKienTruc);
 router.get("/category/ly-thuyet-chuyen-nganh", getPostsByLyThuyetChuyenNganh);
 router.get("/category/thuc-dia/all", getAllPostsByThucDia);
 router.get("/category/thuc-tap/all", getAllPostsByThucTap);
+router.get("/category/san-pham", getPostsBySanPham);
 router.get("/:id", getPostById);
 router.post(
   "/",

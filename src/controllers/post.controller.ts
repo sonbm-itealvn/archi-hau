@@ -737,3 +737,53 @@ export const getAllPostsByThucTap = async (req: Request, res: Response) => {
     return handleError(res, error, "Failed to fetch all posts by thuc-tap");
   }
 };
+
+export const getPostsBySanPham = async (req: Request, res: Response) => {
+  try {
+    const status =
+      typeof req.query.status === "string" ? req.query.status : "published";
+    const limit = Number(req.query.limit ?? 20);
+    const safeLimit =
+      Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 20;
+    const page = Number(req.query.page ?? 1);
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const offset = (safePage - 1) * safeLimit;
+
+    const category = await categoryRepository().findOne({
+      where: { slug: "san-pham" },
+    });
+
+    if (!category) {
+      return res.status(404).json({ message: "Category 'san-pham' not found" });
+    }
+
+    const qb = postRepository()
+      .createQueryBuilder("post")
+      .innerJoin("post.postCategories", "postCategory")
+      .where("postCategory.category_id = :categoryId", { categoryId: category.id })
+      .andWhere("post.deleted_at IS NULL")
+      .andWhere("post.status = :status", { status })
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .orderBy("post.created_at", "DESC")
+      .distinct(true);
+
+    const total = await qb.getCount();
+    const posts = await qb.skip(offset).take(safeLimit).getMany();
+
+    return res.json({
+      posts,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch posts by san-pham");
+  }
+};
