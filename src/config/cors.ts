@@ -11,7 +11,7 @@ const parseOrigins = (value?: string): string[] => {
     .filter(Boolean);
 };
 
-const defaultOrigins = ["http://localhost:5173","http://dashboard.son1311.id.vn", "http://localhost:5174", "https://dashboard.son1311.id.vn", "http://landingpage.son1311.id.vn"];
+const defaultOrigins = ["http://localhost:5173", "http://localhost:5174", "https://dashboard.son1311.id.vn", "http://landingpage.son1311.id.vn","http://landingpage.archihau.edu.vn","http://dashboard.archihau.edu.vn"];
 const envOrigins = parseOrigins(process.env.CORS_ORIGINS);
 
 export const corsOptions: CorsOptions = {
