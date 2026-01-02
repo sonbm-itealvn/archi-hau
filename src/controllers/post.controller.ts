@@ -380,10 +380,36 @@ export const createPost = async (req: Request, res: Response) => {
     return res.status(400).json({ message: "author_id is required" });
   }
 
+  // Validate required fields
+  if (!body.title || typeof body.title !== "string" || body.title.trim().length === 0) {
+    return res.status(400).json({ message: "title is required and must be a non-empty string" });
+  }
+
+  if (!body.slug || typeof body.slug !== "string" || body.slug.trim().length === 0) {
+    return res.status(400).json({ message: "slug is required and must be a non-empty string" });
+  }
+
+  if (!body.content || typeof body.content !== "string" || body.content.trim().length === 0) {
+    return res.status(400).json({ message: "content is required and must be a non-empty string" });
+  }
+
   const categoryIds = normalizeIdArray(body.category_ids);
   const tagIds = normalizeIdArray(body.tag_ids);
 
   try {
+    // Check if slug already exists (excluding soft-deleted posts)
+    const existingPost = await postRepository()
+      .createQueryBuilder("post")
+      .where("post.slug = :slug", { slug: body.slug })
+      .andWhere("post.deleted_at IS NULL")
+      .getOne();
+    if (existingPost) {
+      return res.status(409).json({ 
+        message: "A post with this slug already exists",
+        existingPostId: existingPost.id 
+      });
+    }
+
     const author = await userRepository().findOneBy({ id: authorId });
     if (!author) {
       return res.status(404).json({ message: "Author not found" });
@@ -445,6 +471,35 @@ export const createPost = async (req: Request, res: Response) => {
 
     return res.status(201).json(postWithRelations ?? savedPost);
   } catch (error) {
+    // Log full error details for debugging
+    if (error instanceof Error) {
+      console.error("Error creating post:", {
+        message: error.message,
+        stack: error.stack,
+        body: req.body,
+        user: req.user?.id,
+      });
+
+      // Handle specific database errors
+      const errorMessage = error.message.toLowerCase();
+      if (errorMessage.includes("duplicate") || errorMessage.includes("unique")) {
+        return res.status(409).json({ 
+          message: "A post with this slug or identifier already exists",
+          details: error.message 
+        });
+      }
+      if (errorMessage.includes("foreign key") || errorMessage.includes("constraint")) {
+        return res.status(400).json({ 
+          message: "Invalid reference to related entity",
+          details: error.message 
+        });
+      }
+    } else {
+      console.error("Unknown error creating post:", error, {
+        body: req.body,
+        user: req.user?.id,
+      });
+    }
     return handleError(res, error, "Failed to create post");
   }
 };
