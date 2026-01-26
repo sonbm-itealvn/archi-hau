@@ -74,21 +74,22 @@ const uploadImageIfNeeded = async (
   return uploadUrlAndRecord(imageUrl, userId);
 };
 
-const deactivateAllOtherBanners = async (excludeId?: number) => {
-  const repo = bannerRepository();
-  // TypeORM doesn't support $ne, so we need to use query builder
-  const qb = repo
-    .createQueryBuilder()
-    .update(Banner)
-    .set({ is_active: false })
-    .where("is_active = :isActive", { isActive: true });
-  
-  if (excludeId) {
-    qb.andWhere("id != :excludeId", { excludeId });
-  }
-  
-  await qb.execute();
-};
+// Hàm này không còn được sử dụng vì cho phép nhiều banner được activate cùng lúc
+// const deactivateAllOtherBanners = async (excludeId?: number) => {
+//   const repo = bannerRepository();
+//   // TypeORM doesn't support $ne, so we need to use query builder
+//   const qb = repo
+//     .createQueryBuilder()
+//     .update(Banner)
+//     .set({ is_active: false })
+//     .where("is_active = :isActive", { isActive: true });
+//   
+//   if (excludeId) {
+//     qb.andWhere("id != :excludeId", { excludeId });
+//   }
+//   
+//   await qb.execute();
+// };
 
 export const getBanners = async (req: Request, res: Response) => {
   try {
@@ -158,11 +159,7 @@ export const createBanner = async (req: Request, res: Response) => {
       }
     }
 
-    // Nếu banner mới được set is_active = true, thì deactivate tất cả banner khác
-    if (payload.is_active === true) {
-      await deactivateAllOtherBanners();
-    }
-
+    // Cho phép nhiều banner được activate cùng lúc
     const banner = bannerRepository().create(payload);
     const saved = await bannerRepository().save(banner);
     return res.status(201).json(saved);
@@ -200,11 +197,7 @@ export const updateBanner = async (req: Request, res: Response) => {
       }
     }
 
-    // Nếu banner được update với is_active = true, thì deactivate tất cả banner khác
-    if (updates.is_active === true) {
-      await deactivateAllOtherBanners(id);
-    }
-
+    // Cho phép nhiều banner được activate cùng lúc
     const merged = repo.merge(existing, updates);
     const saved = await repo.save(merged);
     return res.json(saved);
@@ -235,18 +228,15 @@ export const deleteBanner = async (req: Request, res: Response) => {
 
 export const getActiveBanner = async (req: Request, res: Response) => {
   try {
-    const banner = await bannerRepository().findOne({
+    const banners = await bannerRepository().find({
       where: { is_active: true },
       order: { display_order: "ASC", created_at: "DESC" },
     });
     
-    if (!banner) {
-      return res.status(404).json({ message: "No active banner found" });
-    }
-    
-    return res.json(banner);
+    // Trả về mảng các banner active (có thể rỗng nếu không có banner nào active)
+    return res.json(banners);
   } catch (error) {
-    return handleError(res, error, "Failed to fetch active banner");
+    return handleError(res, error, "Failed to fetch active banners");
   }
 };
 

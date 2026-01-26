@@ -3,6 +3,7 @@ import { AppDataSource } from "../data-source";
 import { Post } from "../entities/Post";
 import { User } from "../entities/User";
 import { Category } from "../entities/Category";
+import { CategoryGroup } from "../entities/CategoryGroup";
 import { Tag } from "../entities/Tag";
 import { PostCategory } from "../entities/PostCategory";
 import { PostTag } from "../entities/PostTag";
@@ -15,6 +16,7 @@ import {
 const postRepository = () => AppDataSource.getRepository(Post);
 const userRepository = () => AppDataSource.getRepository(User);
 const categoryRepository = () => AppDataSource.getRepository(Category);
+const categoryGroupRepository = () => AppDataSource.getRepository(CategoryGroup);
 const tagRepository = () => AppDataSource.getRepository(Tag);
 const postCategoryRepository = () => AppDataSource.getRepository(PostCategory);
 const postTagRepository = () => AppDataSource.getRepository(PostTag);
@@ -405,8 +407,13 @@ export const createPost = async (req: Request, res: Response) => {
       .getOne();
     if (existingPost) {
       return res.status(409).json({ 
-        message: "A post with this slug already exists",
-        existingPostId: existingPost.id 
+        message: `A post with this slug already exists`,
+        details: {
+          existingPostId: existingPost.id,
+          existingPostTitle: existingPost.title,
+          existingPostSlug: existingPost.slug,
+          suggestion: `Please use a different slug, e.g., "${body.slug}-${Date.now()}" or "${body.slug}-copy"`
+        }
       });
     }
 
@@ -840,5 +847,47 @@ export const getPostsBySanPham = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return handleError(res, error, "Failed to fetch posts by san-pham");
+  }
+};
+
+export const getAllPostsByHoatDongSuKien = async (req: Request, res: Response) => {
+  try {
+    const status =
+      typeof req.query.status === "string" ? req.query.status : "published";
+
+    const group = await categoryGroupRepository().findOne({
+      where: { slug: "hoat-dong-su-kien" },
+      relations: ["categories"],
+    });
+
+    if (!group) {
+      return res.status(404).json({ message: "Group 'hoat-dong-su-kien' not found" });
+    }
+
+    if (!group.categories || group.categories.length === 0) {
+      return res.json([]);
+    }
+
+    const categoryIds = group.categories.map((cat) => cat.id);
+
+    const qb = postRepository()
+      .createQueryBuilder("post")
+      .innerJoin("post.postCategories", "postCategory")
+      .where("postCategory.category_id IN (:...categoryIds)", { categoryIds })
+      .andWhere("post.deleted_at IS NULL")
+      .andWhere("post.status = :status", { status })
+      .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.postCategories", "postCategories")
+      .leftJoinAndSelect("postCategories.category", "category")
+      .leftJoinAndSelect("post.postTags", "postTags")
+      .leftJoinAndSelect("postTags.tag", "tag")
+      .orderBy("post.created_at", "DESC")
+      .distinct(true);
+
+    const posts = await qb.getMany();
+
+    return res.json(posts);
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch all posts by hoat-dong-su-kien");
   }
 };
